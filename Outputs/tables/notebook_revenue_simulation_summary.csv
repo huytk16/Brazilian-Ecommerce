@@ -1,0 +1,2 @@
+﻿scenario,n_runs,expected_revenue,stddev_revenue,p_revenue_below_80pct_mean,percentile_5,percentile_95
+top_5_category_monthly_revenue,1000,248589.03498625386,62896.55709923101,0.214,146069.3538726224,355696.23672190245

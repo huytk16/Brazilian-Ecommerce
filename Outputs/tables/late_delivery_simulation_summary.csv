@@ -1,0 +1,2 @@
+﻿scenario,n_runs,sample_orders_per_run,expected_late_rate,stddev_late_rate,p_late_rate_above_10pct,percentile_5,percentile_95
+platform_late_rate_1000_order_sample,1000,1000,0.081117,0.008547184645564022,0.017,0.067,0.095

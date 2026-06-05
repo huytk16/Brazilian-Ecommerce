@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Olist Operations Analytics Report</title>
+  <style>
+    :root {
+      --ink: #1f2933;
+      --muted: #5f6b7a;
+      --line: #d9e2ec;
+      --panel: #f7fafc;
+      --brand: #0f766e;
+      --accent: #b45309;
+    }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: var(--ink);
+      background: #ffffff;
+      line-height: 1.55;
+    }
+    main {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 32px 28px 56px;
+    }
+    header {
+      border-bottom: 3px solid var(--brand);
+      padding-bottom: 18px;
+      margin-bottom: 24px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 30px;
+      letter-spacing: 0;
+    }
+    h2 {
+      margin-top: 34px;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 6px;
+      font-size: 21px;
+    }
+    .subtitle, .note {
+      color: var(--muted);
+    }
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 12px;
+      margin: 18px 0;
+    }
+    .kpi {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--brand);
+      padding: 12px 14px;
+      border-radius: 6px;
+    }
+    .kpi span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    .kpi strong {
+      display: block;
+      font-size: 20px;
+      margin-top: 4px;
+    }
+    .data-table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 14px 0 22px;
+      font-size: 13px;
+    }
+    .data-table th {
+      background: #e6f4f1;
+      text-align: left;
+      border: 1px solid var(--line);
+      padding: 8px;
+    }
+    .data-table td {
+      border: 1px solid var(--line);
+      padding: 8px;
+      vertical-align: top;
+    }
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 18px;
+      margin-top: 12px;
+    }
+    figure {
+      margin: 0;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px;
+      background: #fff;
+    }
+    figure img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    figcaption {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    code {
+      background: #eef2f7;
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+    ul {
+      padding-left: 22px;
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>OLIST OPERATIONS ANALYTICS REPORT</h1>
+    <div class="subtitle">Kỳ phân tích: 2016-09 đến 2018-08 | Dataset: 99,441 orders, Olist 2016-2018 | Filter: delivered orders</div>
+  </header>
+
+  <section>
+    <h2>1. TỔNG QUAN KINH DOANH</h2>
+    <div class="kpi-grid">
+      <div class="kpi"><span>Payment revenue</span><strong>BRL 15,422,462</strong></div>
+      <div class="kpi"><span>YoY growth 2018 vs 2017</span><strong>22.1%</strong></div>
+      <div class="kpi"><span>AOV</span><strong>BRL 160</strong></div>
+      <div class="kpi"><span>On-time delivery</span><strong>91.9%</strong></div>
+      <div class="kpi"><span>Avg review</span><strong>4.16/5.0</strong></div>
+      <div class="kpi"><span>Late delivery</span><strong>8.1%</strong></div>
+    </div>
+    <ul>
+      <li>Peak demand: Tháng 11/2017 (Black Friday) - 1.6x median monthly revenue baseline.</li>
+      <li>Delivered orders analyzed: 96,478; average delivery time: 12.6 days.</li>
+      <li>Revenue definition: <code>payment_value</code> là doanh thu thực thu; <code>price + freight_value</code> là GMV/item diagnostics.</li>
+    </ul>
+    <table class="data-table"><thead><tr><th>year</th><th>delivered_orders</th><th>payment_revenue</th><th>item_price_revenue</th><th>freight_revenue</th><th>aov_payment</th><th>on_time_rate</th><th>avg_review_score</th><th>avg_delivery_days</th><th>payment_revenue_yoy</th><th>delivered_orders_yoy</th><th>aov_payment_yoy</th></tr></thead><tbody><tr><td>2017</td><td>43428</td><td>6922900.24</td><td>5962902.01</td><td>958633.23</td><td>159.41</td><td>0.9337</td><td>4.1743</td><td>13.0255</td><td></td><td></td><td></td></tr><tr><td>2018</td><td>52783</td><td>8452975.2</td><td>7218125.12</td><td>1233459.65</td><td>160.15</td><td>0.9063</td><td>4.142</td><td>12.1377</td><td>0.221</td><td>0.2154</td><td>0.0046</td></tr></tbody></table>
+  </section>
+
+  <section>
+    <h2>2. DANH MỤC & ĐỊA LÝ</h2>
+    <ul>
+      <li>Top 3 categories doanh thu lớn nhất: <strong>health_beauty, watches_gifts, bed_bath_table</strong>.</li>
+      <li>State có tỷ lệ giao trễ cao nhất: <strong>AL</strong> (23.9%).</li>
+      <li>Pareto insight: <strong>18</strong> danh mục = 80% item price revenue.</li>
+      <li>Top category: <strong>health_beauty</strong> với BRL 1,233,132.</li>
+    </ul>
+    <h3>Top 10 customer states by late delivery risk</h3>
+    <table class="data-table"><thead><tr><th>customer_state</th><th>orders</th><th>payment_revenue</th><th>avg_delivery_days</th><th>late_rate</th><th>avg_freight</th><th>avg_review_score</th></tr></thead><tbody><tr><td>AL</td><td>397</td><td>94195.79</td><td>24.5439</td><td>0.2393</td><td>38.5813</td><td>3.8528</td></tr><tr><td>MA</td><td>717</td><td>147807.29</td><td>21.573</td><td>0.1967</td><td>42.9486</td><td>3.8336</td></tr><tr><td>PI</td><td>476</td><td>105272.17</td><td>19.4571</td><td>0.1597</td><td>42.9773</td><td>3.9936</td></tr><tr><td>CE</td><td>1279</td><td>266463.97</td><td>21.2666</td><td>0.1532</td><td>36.4968</td><td>3.9419</td></tr><tr><td>SE</td><td>335</td><td>70289.13</td><td>21.5198</td><td>0.1522</td><td>40.9401</td><td>3.9072</td></tr><tr><td>BA</td><td>3256</td><td>591270.6</td><td>19.3355</td><td>0.1404</td><td>29.9612</td><td>3.93</td></tr><tr><td>RJ</td><td>12350</td><td>2055690.45</td><td>15.3094</td><td>0.1347</td><td>23.9474</td><td>3.9651</td></tr><tr><td>TO</td><td>274</td><td>60007.37</td><td>17.6581</td><td>0.1277</td><td>42.3535</td><td>4.1538</td></tr><tr><td>PA</td><td>946</td><td>212027.55</td><td>23.7729</td><td>0.1237</td><td>39.6966</td><td>3.91</td></tr><tr><td>ES</td><td>1995</td><td>317682.65</td><td>15.7893</td><td>0.1223</td><td>24.5687</td><td>4.0797</td></tr></tbody></table>
+  </section>
+
+  <section>
+    <h2>3. MÔ HÌNH TỐI ƯU HÓA</h2>
+    <ul>
+      <li>Bài toán: chọn TOP K=10 danh mục nên ưu tiên đầu tư.</li>
+      <li>Loại mô hình: Binary Integer Programming screening.</li>
+      <li>Decision variables: <code>x_i in {0,1}</code>, <code>x_i = 1</code> nếu chọn danh mục i.</li>
+      <li>Objective: Maximize Σ(revenue_i x avg_review_score_i x x_i).</li>
+      <li>Constraints: Σx_i = 10, avg_review_score_i >= 3.5, avg_freight_per_item_i <= BRL 25.</li>
+      <li>Objective value: 33,721,180. Tiết kiệm vs baseline: chưa định lượng vì đây là mô hình chọn danh mục, không phải cost-minimization.</li>
+    </ul>
+    <table class="data-table"><thead><tr><th>selected_rank</th><th>product_category_name_english</th><th>item_price_revenue</th><th>avg_review_score</th><th>avg_freight_per_item</th><th>late_rate</th></tr></thead><tbody><tr><td>1</td><td>health_beauty</td><td>1233131.72</td><td>4.1897</td><td>18.9073</td><td>0.0905</td></tr><tr><td>2</td><td>watches_gifts</td><td>1166176.98</td><td>4.0717</td><td>16.7531</td><td>0.0828</td></tr><tr><td>3</td><td>bed_bath_table</td><td>1023434.76</td><td>3.924</td><td>18.4218</td><td>0.084</td></tr><tr><td>4</td><td>sports_leisure</td><td>954852.55</td><td>4.1655</td><td>19.3814</td><td>0.0741</td></tr><tr><td>5</td><td>computers_accessories</td><td>888724.61</td><td>3.9865</td><td>18.8382</td><td>0.0777</td></tr><tr><td>6</td><td>furniture_decor</td><td>711927.69</td><td>3.9538</td><td>20.6375</td><td>0.0843</td></tr><tr><td>7</td><td>cool_stuff</td><td>610204.1</td><td>4.1949</td><td>21.9141</td><td>0.0675</td></tr><tr><td>8</td><td>housewares</td><td>615628.69</td><td>4.1079</td><td>21.0101</td><td>0.0649</td></tr><tr><td>9</td><td>auto</td><td>578966.65</td><td>4.116</td><td>21.857</td><td>0.0829</td></tr><tr><td>10</td><td>toys</td><td>471286.48</td><td>4.2089</td><td>18.8026</td><td>0.0742</td></tr></tbody></table>
+  </section>
+
+  <section>
+    <h2>4. ĐÁNH GIÁ RỦI RO (N=1,000 runs)</h2>
+    <table class="data-table"><thead><tr><th>Kịch bản</th><th>E[Revenue/tháng]</th><th>StdDev</th><th>P(sụt &gt;20%)</th><th>Chiến lược</th></tr></thead><tbody><tr><td>Top 5 category focus</td><td>BRL 248,589</td><td>BRL 62,897</td><td>21.4%</td><td>Reward/Risk screen</td></tr><tr><td>Baseline platform monthly payment revenue</td><td>BRL 670,542</td><td>BRL 395,192</td><td>34.8%</td><td>Reference</td></tr><tr><td>Late delivery SLA sample</td><td>n/a</td><td>0.9%</td><td>P(late &gt;10%) = 1.7%</td><td>Logistics risk control</td></tr></tbody></table>
+    <ul>
+      <li>Revenue simulation: Normal distribution fitted from monthly revenue of top 5 categories, random seed = 42.</li>
+      <li>Late delivery simulation: 1,000 delivered-order sample per run, platform late probability estimated from historical delivered orders.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>5. KHUYẾN NGHỊ CHIẾN LƯỢC</h2>
+    <ul>
+      <li>Quyết định: ưu tiên 10 danh mục đã chọn, đồng thời drill-down logistics cho các state late-rate cao trước khi mở rộng seller/category.</li>
+      <li>EV ước tính: BRL 248,589 / tháng cho top-5 category revenue simulation proxy.</li>
+      <li>Rủi ro chính: P(revenue &lt; 80% mean) = 21.4%; P(late rate &gt; 10%) = 1.7%.</li>
+      <li>Sensitivity: nếu late rate của category/state được chọn vượt 10% hoặc avg review giảm dưới 3.8, cần giảm ưu tiên category/seller đó và chạy lại optimization.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Charts</h2>
+    <div class="chart-grid">
+      <figure><img src="../charts/01_monthly_payment_revenue.png" alt="Monthly payment revenue"><figcaption>Monthly payment revenue - delivered orders</figcaption></figure>
+      <figure><img src="../charts/02_top_10_categories_revenue.png" alt="Top 10 categories"><figcaption>Top 10 categories by item price revenue</figcaption></figure>
+      <figure><img src="../charts/03_late_rate_by_customer_state.png" alt="Late rate by customer state"><figcaption>Top customer states by late delivery rate</figcaption></figure>
+      <figure><img src="../charts/04_revenue_simulation_histogram.png" alt="Revenue simulation histogram"><figcaption>Monte Carlo revenue simulation histogram</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>Ghi chú kỹ thuật</h2>
+    <ul>
+      <li>Time axis: <code>order_purchase_timestamp</code>.</li>
+      <li>Join quality: <code>items</code>, <code>payments</code>, <code>reviews</code> được aggregate trước ở cấp <code>order_id</code>.</li>
+      <li>Source tables/charts: <code>Outputs/tables</code> và <code>Outputs/charts</code>.</li>
+    </ul>
+  </section>
+</main>
+</body>
+</html>
