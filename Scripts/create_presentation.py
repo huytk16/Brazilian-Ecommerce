@@ -259,27 +259,49 @@ def main():
     p_c3_sub.font.color.rgb = TEXT_MUTED
     p_c3_sub.font.name = 'Segoe UI'
 
-    # Chart 4: BIP Optimization & Monte Carlo Simulations
-    chart4 = slide1.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(6.76), Inches(5.15), widget_width, widget_height)
-    chart4.fill.solid()
-    chart4.fill.fore_color.rgb = CARD_COLOR
-    chart4.line.color.rgb = BORDER_COLOR
-    chart4.line.width = Pt(1)
-    tf4 = chart4.text_frame
-    tf4.margin_left = Inches(0.15)
-    tf4.margin_top = Inches(0.15)
-    p_c4 = tf4.paragraphs[0]
-    p_c4.text = "🎲 KẾT QUẢ GIẢ LẬP RỦI RO & TỐI ƯU HÓA DANH MỤC (BIP & Monte Carlo)"
-    p_c4.font.bold = True
-    p_c4.font.size = Pt(9)
-    p_c4.font.color.rgb = ACCENT_EMERALD
-    p_c4.font.name = 'Segoe UI'
+    # Chart 4a: BIP Category Optimization List
+    chart4a = slide1.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(6.76), Inches(5.15), Inches(2.935), widget_height)
+    chart4a.fill.solid()
+    chart4a.fill.fore_color.rgb = CARD_COLOR
+    chart4a.line.color.rgb = BORDER_COLOR
+    chart4a.line.width = Pt(1)
+    tf4a = chart4a.text_frame
+    tf4a.margin_left = Inches(0.15)
+    tf4a.margin_top = Inches(0.15)
+    p_c4a = tf4a.paragraphs[0]
+    p_c4a.text = "🎯 TOP 10 NGÀNH HÀNG ƯU TIÊN (BIP)"
+    p_c4a.font.bold = True
+    p_c4a.font.size = Pt(8)
+    p_c4a.font.color.rgb = ACCENT_EMERALD
+    p_c4a.font.name = 'Segoe UI'
     
-    p_c4_sub = tf4.add_paragraph()
-    p_c4_sub.text = "\n- Quy hoạch nguyên (BIP): Chọn Top 10 danh mục trọng tâm (cước <= 25, review >= 3.5)\n- Giả lập Monte Carlo (N=1,000):\n  * Rủi ro doanh thu giảm >20%: 21.4% (Expected monthly mean: BRL 248.5K)\n  * Rủi ro giao trễ vi phạm SLA (>10% trễ): cực thấp (1.7%)"
-    p_c4_sub.font.size = Pt(8.5)
-    p_c4_sub.font.color.rgb = TEXT_MUTED
-    p_c4_sub.font.name = 'Segoe UI'
+    p_c4a_sub = tf4a.add_paragraph()
+    p_c4a_sub.text = "\n- Quy hoạch nguyên (BIP)\n- Ràng buộc: Cước <= 25 BRL, Review >= 3.5\n- Dẫn đầu: health_beauty, watches_gifts, bed_bath_table..."
+    p_c4a_sub.font.size = Pt(7.5)
+    p_c4a_sub.font.color.rgb = TEXT_MUTED
+    p_c4a_sub.font.name = 'Segoe UI'
+
+    # Chart 4b: Monte Carlo Simulation Cards
+    chart4b = slide1.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(9.895), Inches(5.15), Inches(2.935), widget_height)
+    chart4b.fill.solid()
+    chart4b.fill.fore_color.rgb = CARD_COLOR
+    chart4b.line.color.rgb = BORDER_COLOR
+    chart4b.line.width = Pt(1)
+    tf4b = chart4b.text_frame
+    tf4b.margin_left = Inches(0.15)
+    tf4b.margin_top = Inches(0.15)
+    p_c4b = tf4b.paragraphs[0]
+    p_c4b.text = "🎲 GIẢ LẬP RỦI RO MONTE CARLO"
+    p_c4b.font.bold = True
+    p_c4b.font.size = Pt(8)
+    p_c4b.font.color.rgb = ACCENT_EMERALD
+    p_c4b.font.name = 'Segoe UI'
+    
+    p_c4b_sub = tf4b.add_paragraph()
+    p_c4b_sub.text = "\n- Rủi ro Doanh thu: 21.4%\n- Rủi ro SLA giao trễ: 1.7%\n- Giả lập N=1,000 runs, đảm bảo vận hành ổn định."
+    p_c4b_sub.font.size = Pt(7.5)
+    p_c4b_sub.font.color.rgb = TEXT_MUTED
+    p_c4b_sub.font.name = 'Segoe UI'
 
 
     # ==================== SLIDE 2: THEME & LAYOUT SPECS ====================
@@ -325,8 +347,11 @@ def main():
         "  * Import view df_master làm Fact Table chính (chứa dữ liệu đơn hàng, thanh toán, ngày giao).",
         "  * Import view item_detail làm Fact/Dimension phụ (cho phân tích danh mục, sản phẩm, cước vận chuyển).",
         "Thiết lập bảng lịch Dim_Date bằng DAX",
-        "  * Tạo bảng mới: Dim_Date = ADDCOLUMNS(CALENDAR(MIN(df_master[order_purchase_timestamp]), MAX(df_master[order_purchase_timestamp])), \"Year\", YEAR([Date]), \"Month Number\", MONTH([Date]), \"Month Short\", FORMAT([Date], \"MMM\"), \"Month-Year Number\", YEAR([Date]) * 100 + MONTH([Date]), \"Month-Year\", FORMAT([Date], \"YYYY-MM\"))",
-        "  * Sắp xếp cột chữ theo số (Sort by Column) để hiển thị biểu đồ đúng thứ tự thời gian (Ví dụ: Month Short sắp xếp theo Month Number).",
+        "  * Tạo bảng lịch tự động bằng công thức:",
+        "    - Dim_Date = VAR MinDate = MIN(df_master[order_purchase_timestamp])",
+        "      VAR MaxDate = MAX(df_master[order_purchase_timestamp])",
+        "      RETURN ADDCOLUMNS(CALENDAR(MinDate, MaxDate), \"Year\", YEAR([Date]), \"Month Number\", MONTH([Date]), \"Month Short\", FORMAT([Date], \"MMM\"), \"Month-Year Number\", YEAR([Date]) * 100 + MONTH([Date]), \"Month-Year\", FORMAT([Date], \"YYYY-MM\"), \"Quarter\", \"Q\" & QUARTER([Date]))",
+        "  * Cấu hình sắp xếp cột (Sort by Column) để hiển thị biểu đồ đúng thứ tự thời gian (Ví dụ: Month Short sắp xếp theo Month Number).",
         "Thiết lập các mối quan hệ (Relationships)",
         "  * Quan hệ 1-nhiều (1:*) từ Dim_Date[Date] đến df_master[order_purchase_timestamp].",
         "  * Quan hệ 1-nhiều (1:*) từ df_master[order_id] đến item_detail[order_id]."
