@@ -17,6 +17,48 @@ Tài liệu này cung cấp hướng dẫn chi tiết từng bước để cấu
    * `df_master` (Dữ liệu mức đơn hàng sạch - Dùng cho các KPI tổng quan, xu hướng, địa lý)
    * `item_detail` (Dữ liệu mức mặt hàng sạch - Dùng cho phân tích danh mục, người bán, tối ưu hóa)
 
+
+---
+
+## 1.5. Thiết lập Bảng Date chuẩn (Dim_Date)
+
+Để sử dụng các hàm phân tích thời gian (Time Intelligence) trong DAX (như `SAMEPERIODLASTYEAR`, `DATEADD`, v.v.), chúng ta cần tạo một bảng lịch chuẩn bằng DAX và thiết lập quan hệ.
+
+### Bước 1: Tạo bảng Dim_Date bằng DAX
+1. Trên thanh công cụ, chọn **Modeling** -> **New Table**.
+2. Nhập đoạn mã DAX sau để tự động tạo bảng lịch dựa trên phạm vi ngày mua hàng trong `df_master`:
+
+```dax
+Dim_Date = 
+VAR MinDate = MIN(df_master[order_purchase_timestamp])
+VAR MaxDate = MAX(df_master[order_purchase_timestamp])
+RETURN
+ADDCOLUMNS(
+    CALENDAR(MinDate, MaxDate),
+    "Year", YEAR([Date]),
+    "Month Number", MONTH([Date]),
+    "Month Name", FORMAT([Date], "MMMM"),
+    "Month Short", FORMAT([Date], "MMM"),
+    "Month-Year Number", YEAR([Date]) * 100 + MONTH([Date]),
+    "Month-Year", FORMAT([Date], "YYYY-MM"),
+    "Quarter", "Q" & QUARTER([Date]),
+    "Week Number", WEEKNUM([Date]),
+    "Day of Week", WEEKDAY([Date]),
+    "Day of Week Name", FORMAT([Date], "dddd")
+)
+```
+
+### Bước 2: Cấu hình Sắp xếp Cột (Sort by Column)
+Trong Power BI, các cột chữ như `Month Name`, `Month Short`, và `Month-Year` mặc định sẽ sắp xếp theo bảng chữ cái (A-Z). Để chúng hiển thị chính xác theo thời gian:
+1. Chuyển sang thẻ **Data View**.
+2. Click chọn cột `Month Short` (hoặc `Month Name`) -> Chọn thẻ **Column tools** -> Click **Sort by column** -> Chọn cột **Month Number**.
+3. Click chọn cột `Month-Year` -> Chọn **Sort by column** -> Chọn cột **Month-Year Number**.
+
+### Bước 3: Thiết lập Mối quan hệ (Relationship)
+1. Chuyển sang thẻ **Model View**.
+2. Kéo thả cột `Date` từ bảng `Dim_Date` nối với cột `order_purchase_timestamp` trong bảng `df_master`.
+3. Mối quan hệ sẽ được tạo dưới dạng **1-nhiều (1:*)** từ `Dim_Date[Date]` sang `df_master[order_purchase_timestamp]` với Cross filter direction là **Single**.
+
 ---
 
 ## 2. Công thức DAX Measures (KPIs & Metrics)
