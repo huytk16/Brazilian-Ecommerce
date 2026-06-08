@@ -171,6 +171,24 @@ Sử dụng visual **Card (New)** để tạo dải 5 chỉ số ngang:
     * Trên 15%: Nền màu đỏ sẫm (`#ef4444` với độ mờ cao).
   * Sắp xếp bảng theo thứ tự giảm dần của `[Late Delivery Rate]` để các điểm nóng vận hành luôn hiển thị ở trên cùng.
 
+### 3.6. Danh sách Ngành hàng Ưu tiên (BIP Category Optimization List)
+* **Visual:** Matrix hoặc Multi-row Card.
+* **Cấu hình dữ liệu:** Import bảng `category_optimization_top10` (lấy từ tệp `category_optimization_top10.csv` đã được biên dịch sẵn trong SQLite database).
+* **Các trường hiển thị:** `selected_rank` (Thứ hạng), `product_category_name_english` (Tên danh mục), `item_price_revenue` (Doanh thu), `avg_review_score` (Điểm review), `avg_freight_per_item` (Cước TB).
+* **Định dạng:**
+  * Background: Nền màu tối `#111827`, độ mờ (Transparency) = 30%.
+  * Grid lines: Tắt lưới ngang dọc, chỉ để viền mỏng phân chia giữa các danh mục để có giao diện tối giản.
+
+### 3.7. Thẻ Giả lập Rủi ro Monte Carlo (Monte Carlo Simulation Cards)
+Sử dụng 2 thẻ **Card (New)** hoặc **Card** đơn xếp ngang để hiển thị chỉ số rủi ro:
+* **Thẻ 1 - Rủi ro Doanh thu tập trung (Revenue Downside Risk):**
+  * Giá trị hiển thị: **21.4%** (Xác suất doanh thu top 5 danh mục sụt giảm >20% so với kỳ vọng trung bình).
+  * Định dạng: Text màu tím hoặc hồng nhạt (`#8b5cf6` hoặc `#f472b6`).
+* **Thẻ 2 - Rủi ro Vi phạm SLA Giao hàng (SLA Delivery Risk):**
+  * Giá trị hiển thị: **1.7%** (Xác suất mẫu 1,000 đơn hàng giao trễ vượt quá ngưỡng quy định 10% của SLA).
+  * Định dạng: Text màu xanh lục (`#10b981`).
+* **Định dạng chung:** Nền `#1f2937` (box con bên trong card lớn) hoặc dùng Multi-row Card để hiển thị chú thích chi tiết bên dưới.
+
 ---
 
 ## 4. Tích hợp Bộ lọc Tương tác (Slicers Bar)
