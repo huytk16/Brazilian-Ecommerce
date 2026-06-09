@@ -100,6 +100,7 @@ Brazilian Ecommerce/
 |   +-- tables/
 +-- Scripts/
 |   +-- create_analysis_notebook.py
+|   +-- create_sqlite_db.py
 |   +-- olist_operations_analysis.py
 +-- SQL/
 |   +-- 01_olist_core_analysis.sql
@@ -371,6 +372,16 @@ Install dependencies:
 ```bash
 pip install pandas numpy matplotlib nbformat jupyter
 ```
+
+### Build the SQLite Database
+
+To load the raw CSV files into the SQLite database and create the core analytical views:
+
+```bash
+python Scripts/create_sqlite_db.py
+```
+
+This generates `Data/olist_analytics.db` locally (which is ignored by Git due to its large file size of ~111MB).
 
 ### Run the Python Pipeline
 
