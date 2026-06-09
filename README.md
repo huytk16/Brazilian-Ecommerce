@@ -61,6 +61,7 @@ Raw data files included:
 | `olist_products_dataset.csv` | Product metadata and physical dimensions |
 | `olist_geolocation_dataset.csv` | ZIP prefix geolocation data |
 | `product_category_name_translation.csv` | Portuguese-to-English product category mapping |
+| `olist_analytics.db` | Compiled SQLite database containing processed analytical tables (`df_master`, `item_detail`, etc.) |
 
 Analysis period in the generated report:
 
@@ -74,6 +75,7 @@ Analysis period in the generated report:
 ```text
 Brazilian Ecommerce/
 +-- Data/
+|   +-- olist_analytics.db
 |   +-- olist_customers_dataset.csv
 |   +-- olist_geolocation_dataset.csv
 |   +-- olist_order_items_dataset.csv
@@ -88,6 +90,13 @@ Brazilian Ecommerce/
 +-- Outputs/
 |   +-- charts/
 |   +-- reports/
+|   |   +-- Power BI/
+|   |   |   +-- Brazillian_Ecommerce.pbix
+|   |   |   +-- DAX.md
+|   |   |   +-- MODELING.md
+|   |   |   +-- layout.svg
+|   |   +-- olist_operations_analytics_report.md
+|   |   +-- olist_operations_analytics_report.html
 |   +-- tables/
 +-- Scripts/
 |   +-- create_analysis_notebook.py
@@ -281,6 +290,36 @@ Generated reports:
 - `Outputs/reports/olist_operations_analytics_report.md`
 - `Outputs/reports/olist_operations_analytics_report.html`
 
+### Power BI Dashboard
+
+An interactive executive dashboard was built in Power BI Desktop using the `Midnight Executive` dark theme (canvas size 1200 × 900 px, 4:3 ratio).
+
+| File | Description |
+| --- | --- |
+| `Outputs/reports/Power BI/Brazillian_Ecommerce.pbix` | Power BI Desktop report file |
+| `Outputs/reports/Power BI/DAX.md` | Full DAX Measures reference (KPIs, YoY growth, sub-labels, logistics) |
+| `Outputs/reports/Power BI/MODELING.md` | Data modeling guide (data types, relationships, Date Table, visual config, slicers) |
+| `Outputs/reports/Power BI/layout.svg` | Dashboard layout wireframe |
+
+Dashboard visuals:
+
+1. **KPI Cards** — Realized Revenue, Delivered Orders, AOV, On-Time Delivery Rate, CSAT Score with dynamic YoY sub-labels.
+2. **Monthly Revenue Trend** — Area chart with Black Friday peak annotation (Nov 2017).
+3. **Top 10 Categories** — Horizontal bar chart with cyan gradient conditional formatting.
+4. **Logistics Risk Matrix** — State-level table with late-delivery rate conditional formatting (green / amber / red).
+5. **Category Prioritization & Simulation** — BIP optimization table and Monte Carlo risk cards.
+
+Key DAX Measures:
+
+| Measure | Value |
+| --- | --- |
+| Realized Revenue | BRL 15,422,462 |
+| Delivered Orders | 96,478 |
+| AOV | ~BRL 160 |
+| On-Time Delivery Rate | 91.9% |
+| Late Delivery Rate | 8.1% |
+| CSAT Score | 4.16 / 5.0 |
+
 ### Charts
 
 Generated chart files:
@@ -369,6 +408,14 @@ The notebook can be rebuilt from the generator script:
 python Scripts/create_analysis_notebook.py
 ```
 
+### Explore the Power BI Dashboard
+
+To view and interact with the executive dashboard:
+1. Open Power BI Desktop.
+2. Open the dashboard file: `Outputs/reports/Power BI/Brazillian_Ecommerce.pbix`.
+3. If prompted to fix the data source, update the connection path of the SQLite database to point to your local copy of `Data/olist_analytics.db`.
+4. Consult the modeling guidelines in [`MODELING.md`](Outputs/reports/Power%20BI/MODELING.md) and DAX formulas in [`DAX.md`](Outputs/reports/Power%20BI/DAX.md) for implementation details.
+
 ## Reproducibility Notes
 
 The repository currently stores raw CSV files inside the `Data/` directory.
@@ -389,6 +436,7 @@ Data/olist_customers_dataset.csv
 Data/olist_sellers_dataset.csv
 Data/olist_products_dataset.csv
 Data/product_category_name_translation.csv
+Data/olist_analytics.db
 ```
 
 The geolocation file is available in the dataset but is not central to the current generated report.
@@ -410,7 +458,7 @@ Potential improvements:
 3. Add automated data validation checks for schema, null rates, date ranges, and duplicate keys.
 4. Extend the optimization model with profit margin, capacity, seller reliability, and logistics cost constraints.
 5. Segment delivery risk by seller state, customer state, product category, freight value, and delivery distance.
-6. Add a dashboard layer using Power BI, Tableau, Streamlit, or Plotly Dash.
+6. ~~Add a dashboard layer using Power BI, Tableau, Streamlit, or Plotly Dash.~~ **Completed** — Power BI dashboard (`Midnight Executive`) built with 5 interactive visuals, full DAX Measures, and logistics risk matrix. See `Outputs/reports/Power BI/`.
 7. Add unit tests for KPI calculations and join-grain assumptions.
 
 ## Author

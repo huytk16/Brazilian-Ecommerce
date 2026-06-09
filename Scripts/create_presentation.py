@@ -2,382 +2,531 @@
 """
 Generate PowerPoint Presentation (.pptx) representing the
 Power BI Dashboard Midnight Executive design and specifications.
+
+Canvas  : 4:3  →  10" × 7.5"  (standard PowerPoint 4:3)
+Layout mirrors dashboard-design.html:
+  - Slide 1: Full-page dashboard mockup
+      Row 1  : Header  (title + badge)            ~7% height
+      Row 2  : Slicers bar (full width)            ~8% height
+      Row 3  : 5 KPI cards                        ~16% height
+      Row 4+ : Body grid  left(1.1fr) | right(0.9fr)  ~65% height
+               Left  : 2 chart cards (50/50 split)
+               Right : 3 cards (40 / 35 / 25 split)
 """
 
 import os
 from pptx import Presentation
-from pptx.util import Inches, Pt
+from pptx.util import Inches, Pt, Emu
 from pptx.enum.shapes import MSO_SHAPE
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
+from pptx.oxml.ns import qn
+from lxml import etree
 
-# Color definitions
-BG_COLOR = RGBColor(11, 15, 25)       # #0b0f19
-CARD_COLOR = RGBColor(17, 24, 39)     # #111827
-BORDER_COLOR = RGBColor(31, 41, 55)   # #1f2937
-TEXT_WHITE = RGBColor(248, 250, 252)  # #f8fafc
-TEXT_MUTED = RGBColor(148, 163, 184)  # #94a3b8
-ACCENT_CYAN = RGBColor(6, 182, 212)   # #06b6d4
-ACCENT_EMERALD = RGBColor(16, 185, 129) # #10b981
-ACCENT_VIOLET = RGBColor(139, 92, 246) # #8b5cf6
-ACCENT_AMBER = RGBColor(245, 158, 11)  # #f59e0b
-ACCENT_ROSE = RGBColor(239, 68, 68)   # #ef4444
+# ── Canvas (4:3) ─────────────────────────────────────────────────────────────
+SLIDE_W = Inches(10.0)
+SLIDE_H = Inches(7.5)
 
+# ── Color palette ─────────────────────────────────────────────────────────────
+BG_COLOR       = RGBColor(11,  15,  25)   # #0b0f19
+CARD_COLOR     = RGBColor(17,  24,  39)   # #111827
+BORDER_COLOR   = RGBColor(31,  41,  55)   # #1f2937
+TEXT_WHITE     = RGBColor(248, 250, 252)  # #f8fafc
+TEXT_MUTED     = RGBColor(148, 163, 184)  # #94a3b8
+ACCENT_CYAN    = RGBColor(6,   182, 212)  # #06b6d4
+ACCENT_EMERALD = RGBColor(16,  185, 129)  # #10b981
+ACCENT_VIOLET  = RGBColor(139, 92,  246)  # #8b5cf6
+ACCENT_AMBER   = RGBColor(245, 158, 11)   # #f59e0b
+ACCENT_ROSE    = RGBColor(239, 68,  68)   # #ef4444
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
 def set_slide_background(slide):
-    background = slide.background
-    fill = background.fill
+    fill = slide.background.fill
     fill.solid()
     fill.fore_color.rgb = BG_COLOR
 
+
+def set_shape_corner_radius(shape, radius_pct: int = 8):
+    sp = shape._element
+    prstGeom = sp.find(qn("a:prstGeom"), sp.nsmap)
+    if prstGeom is None:
+        return
+    avLst = prstGeom.find(qn("a:avLst"), sp.nsmap)
+    if avLst is None:
+        avLst = etree.SubElement(prstGeom, qn("a:avLst"))
+    for gd in avLst.findall(qn("a:gd")):
+        avLst.remove(gd)
+    adj_val = max(0, min(50000, int(radius_pct * 500)))
+    gd = etree.SubElement(avLst, qn("a:gd"))
+    gd.set("name", "adj")
+    gd.set("fmla", f"val {adj_val}")
+
+
+def add_rounded_card(slide, left, top, width, height,
+                     fill_color=None, border_color=None, corner_pct=8):
+    shape = slide.shapes.add_shape(
+        MSO_SHAPE.ROUNDED_RECTANGLE, left, top, width, height
+    )
+    shape.fill.solid()
+    shape.fill.fore_color.rgb = fill_color or CARD_COLOR
+    if border_color:
+        shape.line.color.rgb = border_color
+        shape.line.width = Pt(0.75)
+    else:
+        shape.line.fill.background()
+    set_shape_corner_radius(shape, corner_pct)
+    return shape
+
+
+def add_text(tf, text, size_pt, bold=False, color=None, align=None, space_before_pt=0):
+    if tf.paragraphs and tf.paragraphs[-1].text == "":
+        p = tf.paragraphs[-1]
+    else:
+        p = tf.add_paragraph()
+    p.text = text
+    p.font.size = Pt(size_pt)
+    p.font.bold = bold
+    p.font.color.rgb = color or TEXT_WHITE
+    p.font.name = "Segoe UI"
+    if align:
+        p.alignment = align
+    if space_before_pt:
+        p.space_before = Pt(space_before_pt)
+    return p
+
+
+# ── Section: Header ───────────────────────────────────────────────────────────
 def add_header(slide, title_text, badge_text="SALES DIRECTOR PANEL"):
-    # Title box
-    title_box = slide.shapes.add_textbox(Inches(0.5), Inches(0.3), Inches(8), Inches(0.6))
-    tf = title_box.text_frame
-    tf.word_wrap = True
-    p = tf.paragraphs[0]
+    """Header: title left, badge pill right.  Top row ~0.50"."""
+    # Title textbox
+    tb = slide.shapes.add_textbox(Inches(0.35), Inches(0.14), Inches(7.0), Inches(0.42))
+    tb.text_frame.word_wrap = False
+    p = tb.text_frame.paragraphs[0]
     p.text = title_text
-    p.font.size = Pt(20)
+    p.font.size = Pt(15)
     p.font.bold = True
     p.font.color.rgb = TEXT_WHITE
-    p.font.name = 'Segoe UI'
+    p.font.name = "Segoe UI"
 
-    # Badge box
-    badge_shape = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(10.5), Inches(0.4), Inches(2.3), Inches(0.35))
-    badge_shape.fill.solid()
-    badge_shape.fill.fore_color.rgb = RGBColor(6, 45, 60) # dark cyan glow background
-    badge_shape.line.color.rgb = ACCENT_CYAN
-    badge_shape.line.width = Pt(1)
-    
-    tf_b = badge_shape.text_frame
-    tf_b.word_wrap = False
-    p_b = tf_b.paragraphs[0]
+    # Badge pill
+    bw, bh = Inches(2.0), Inches(0.28)
+    badge = slide.shapes.add_shape(
+        MSO_SHAPE.ROUNDED_RECTANGLE,
+        SLIDE_W - bw - Inches(0.35), Inches(0.17), bw, bh
+    )
+    badge.fill.solid()
+    badge.fill.fore_color.rgb = RGBColor(6, 45, 60)
+    badge.line.color.rgb = ACCENT_CYAN
+    badge.line.width = Pt(0.75)
+    set_shape_corner_radius(badge, 50)
+    tf = badge.text_frame
+    tf.word_wrap = False
+    p_b = tf.paragraphs[0]
     p_b.text = badge_text
     p_b.alignment = PP_ALIGN.CENTER
-    p_b.font.size = Pt(8.5)
+    p_b.font.size = Pt(7)
     p_b.font.bold = True
     p_b.font.color.rgb = ACCENT_CYAN
-    p_b.font.name = 'Segoe UI'
+    p_b.font.name = "Segoe UI"
 
-def create_card(slide, left, top, width, height, title, value, subtext="", accent_color=None):
-    # Main rounded card
-    card = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, left, top, width, height)
-    card.fill.solid()
-    card.fill.fore_color.rgb = CARD_COLOR
-    card.line.color.rgb = BORDER_COLOR
-    card.line.width = Pt(1)
-    
-    # Accent top border
-    if accent_color:
-        accent_bar = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, width, Inches(0.06))
-        accent_bar.fill.solid()
-        accent_bar.fill.fore_color.rgb = accent_color
-        accent_bar.line.fill.background()
 
-    # Text content
+# ── Section: Slicers bar ──────────────────────────────────────────────────────
+def add_slicers(slide, left, top, width, height):
+    """Single pill-shaped slicers bar with 4 filter labels."""
+    card = add_rounded_card(slide, left, top, width, height,
+                            fill_color=CARD_COLOR, border_color=BORDER_COLOR,
+                            corner_pct=8)
     tf = card.text_frame
+    tf.word_wrap = False
+    p = tf.paragraphs[0]
+    p.text = ("  📅 Khoảng t.gian: 2016-09 – 2018-08    |    "
+              "📍 Bang KH: All    |    🏬 Bang Người bán: All    |    🏆 Top N: Top 10")
+    p.font.size = Pt(8)
+    p.font.color.rgb = TEXT_MUTED
+    p.font.name = "Segoe UI"
+    tf.margin_top = Inches(0.10)
+    tf.margin_left = Inches(0.12)
+
+
+# ── Section: KPI cards ────────────────────────────────────────────────────────
+def create_kpi_card(slide, left, top, width, height,
+                    label, value, trend_text, accent_color):
+    """KPI card with 3-pt accent top bar, label / value / trend."""
+    add_rounded_card(slide, left, top, width, height,
+                     fill_color=CARD_COLOR, border_color=BORDER_COLOR, corner_pct=8)
+    # Accent strip
+    strip = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, width, Pt(3))
+    strip.fill.solid()
+    strip.fill.fore_color.rgb = accent_color
+    strip.line.fill.background()
+
+    # Text
+    pad_x, pad_top = Inches(0.12), Inches(0.10)
+    tb = slide.shapes.add_textbox(
+        left + pad_x, top + pad_top,
+        width - 2 * pad_x, height - pad_top - Inches(0.08)
+    )
+    tf = tb.text_frame
     tf.word_wrap = True
-    tf.margin_left = Inches(0.15)
-    tf.margin_right = Inches(0.15)
-    tf.margin_top = Inches(0.12)
-    tf.margin_bottom = Inches(0.1)
-    
-    # Title
+
     p1 = tf.paragraphs[0]
-    p1.text = title.upper()
-    p1.font.size = Pt(8)
+    p1.text = label.upper()
+    p1.font.size = Pt(7)
     p1.font.bold = True
     p1.font.color.rgb = TEXT_MUTED
-    p1.font.name = 'Segoe UI'
-    
-    # Value
+    p1.font.name = "Segoe UI"
+
     p2 = tf.add_paragraph()
     p2.text = value
-    p2.font.size = Pt(18)
+    p2.font.size = Pt(16)
     p2.font.bold = True
     p2.font.color.rgb = TEXT_WHITE
-    p2.font.name = 'Segoe UI'
-    
-    # Subtext
-    if subtext:
-        p3 = tf.add_paragraph()
-        p3.text = subtext
-        p3.font.size = Pt(7.5)
-        p3.font.color.rgb = accent_color if accent_color else TEXT_MUTED
-        p3.font.name = 'Segoe UI'
+    p2.font.name = "Segoe UI"
 
+    p3 = tf.add_paragraph()
+    p3.text = trend_text
+    p3.font.size = Pt(6.5)
+    p3.font.color.rgb = accent_color
+    p3.font.name = "Segoe UI"
+
+
+# ── Section: Widget cards ─────────────────────────────────────────────────────
+def add_widget_card(slide, left, top, width, height,
+                    icon_title, accent_color, body_lines):
+    """Large chart/table widget card with header + body text."""
+    add_rounded_card(slide, left, top, width, height,
+                     fill_color=CARD_COLOR, border_color=BORDER_COLOR, corner_pct=7)
+
+    pad_x, pad_top = Inches(0.13), Inches(0.11)
+    tb = slide.shapes.add_textbox(
+        left + pad_x, top + pad_top,
+        width - 2 * pad_x, height - pad_top - Inches(0.10)
+    )
+    tf = tb.text_frame
+    tf.word_wrap = True
+
+    # Header title
+    p0 = tf.paragraphs[0]
+    p0.text = icon_title
+    p0.font.size = Pt(8)
+    p0.font.bold = True
+    p0.font.color.rgb = accent_color
+    p0.font.name = "Segoe UI"
+
+    # Separator line
+    sep = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        left + pad_x, top + Inches(0.32),
+        width - 2 * pad_x, Pt(0.5)
+    )
+    sep.fill.solid()
+    sep.fill.fore_color.rgb = BORDER_COLOR
+    sep.line.fill.background()
+
+    # Body
+    for (txt, sz, bold, clr) in body_lines:
+        p = tf.add_paragraph()
+        p.text = txt
+        p.font.size = Pt(sz)
+        p.font.bold = bold
+        p.font.color.rgb = clr or TEXT_MUTED
+        p.font.name = "Segoe UI"
+
+
+# ── Section: Bullet/spec slide ────────────────────────────────────────────────
 def add_bullet_slide(prs, title, bullets):
-    blank_layout = prs.slide_layouts[6]
-    slide = prs.slides.add_slide(blank_layout)
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
     set_slide_background(slide)
     add_header(slide, title)
-    
-    # Text Box for content
-    content_box = slide.shapes.add_textbox(Inches(0.5), Inches(1.1), Inches(12.33), Inches(5.8))
-    tf = content_box.text_frame
+
+    # Content textbox fills the remaining area
+    tb = slide.shapes.add_textbox(Inches(0.38), Inches(0.82), Inches(9.24), Inches(6.35))
+    tf = tb.text_frame
     tf.word_wrap = True
-    
+
     first = True
     for bullet in bullets:
         if first:
-            p = tf.paragraphs[0]
-            first = False
+            p = tf.paragraphs[0]; first = False
         else:
             p = tf.add_paragraph()
-        
-        # Determine indentation
-        if bullet.startswith('  * '):
-            p.text = bullet[4:]
-            p.level = 1
-            p.font.size = Pt(13)
-            p.font.color.rgb = TEXT_MUTED
-        elif bullet.startswith('    - '):
+
+        if bullet.startswith("    - "):
             p.text = bullet[6:]
             p.level = 2
-            p.font.size = Pt(11)
+            p.font.size = Pt(10)
+            p.font.color.rgb = TEXT_MUTED
+        elif bullet.startswith("  * "):
+            p.text = bullet[4:]
+            p.level = 1
+            p.font.size = Pt(11.5)
             p.font.color.rgb = TEXT_MUTED
         else:
             p.text = bullet
             p.level = 0
-            p.font.size = Pt(15)
+            p.font.size = Pt(13)
             p.font.bold = True
             p.font.color.rgb = TEXT_WHITE
-            p.space_before = Pt(8)
-            
-        p.font.name = 'Segoe UI'
+            p.space_before = Pt(7)
 
+        p.font.name = "Segoe UI"
+
+
+# ── Main ──────────────────────────────────────────────────────────────────────
 def main():
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    base_dir = os.path.dirname(script_dir)
-    
+    base_dir   = os.path.dirname(script_dir)
+
     prs = Presentation()
-    prs.slide_width = Inches(13.333)
-    prs.slide_height = Inches(7.5)
-    
-    blank_layout = prs.slide_layouts[6] # completely blank layout
+    prs.slide_width  = SLIDE_W   # 10"
+    prs.slide_height = SLIDE_H   # 7.5"
 
-    # ==================== SLIDE 1: DASHBOARD MOCKUP ====================
-    slide1 = prs.slides.add_slide(blank_layout)
+    # ── Layout constants ──────────────────────────────────────────────────────
+    M   = Inches(0.32)           # outer margin (left/right)
+    GAP = Inches(0.14)           # small gap between cards
+
+    INNER_W = SLIDE_W - 2 * M   # 9.36"
+
+    # Row tops / heights  (fraction of 7.5")
+    #   Header   : top=0,       h=0.50"
+    #   Slicers  : top=0.52",   h=0.44"
+    #   KPI row  : top=1.00",   h=1.10"
+    #   Body     : top=2.14",   bot=7.26"  → h=5.12"
+    HDR_TOP  = Inches(0.00)
+    HDR_H    = Inches(0.50)
+
+    SLC_TOP  = Inches(0.52)
+    SLC_H    = Inches(0.44)
+
+    KPI_TOP  = Inches(1.00)
+    KPI_H    = Inches(1.10)
+
+    BODY_TOP = Inches(2.14)
+    BODY_BOT = Inches(7.26)
+    BODY_H   = BODY_BOT - BODY_TOP   # 5.12"
+
+    # Body columns  (1.1 : 0.9 from HTML .db-body grid)
+    COL_GAP  = Inches(0.16)
+    LEFT_RATIO = 1.1 / 2.0
+    LEFT_W  = INNER_W * LEFT_RATIO  - COL_GAP / 2   # ~5.01"
+    RIGHT_W = INNER_W * (1 - LEFT_RATIO) - COL_GAP / 2  # ~4.07"
+    LEFT_X  = M
+    RIGHT_X = M + LEFT_W + COL_GAP
+
+    ROW_GAP = Inches(0.13)
+
+    # ══════════════════════════════════════════════════════════
+    # SLIDE 1 — Dashboard Mockup (4:3)
+    # ══════════════════════════════════════════════════════════
+    slide1 = prs.slides.add_slide(prs.slide_layouts[6])
     set_slide_background(slide1)
-    add_header(slide1, "Olist E-Commerce - Dashboard Mockup Grid")
-    
-    # 1. Slicers Row Mock
-    slicer_bar = slide1.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.5), Inches(1.0), Inches(12.33), Inches(0.6))
-    slicer_bar.fill.solid()
-    slicer_bar.fill.fore_color.rgb = CARD_COLOR
-    slicer_bar.line.color.rgb = BORDER_COLOR
-    slicer_bar.line.width = Pt(1)
-    
-    tf_s = slicer_bar.text_frame
-    tf_s.word_wrap = False
-    p_s = tf_s.paragraphs[0]
-    p_s.text = " 📅 Date Range: 2016-09 - 2018-08    |    📍 Customer State: All    |    🏬 Seller State: All    |    💳 Payment Type: All"
-    p_s.font.size = Pt(9)
-    p_s.font.color.rgb = TEXT_MUTED
-    p_s.font.name = 'Segoe UI'
-    
-    # 2. KPI Cards (5 Cards)
-    kpi_width = Inches(2.3)
-    kpi_height = Inches(1.1)
-    kpi_gap = Inches(0.207)
-    kpi_y = Inches(1.8)
-    
-    create_card(slide1, Inches(0.5) + 0 * (kpi_width + kpi_gap), kpi_y, kpi_width, kpi_height, "Doanh thu Realized", "BRL 15.42M", "▲ 22.1% YoY", ACCENT_EMERALD)
-    create_card(slide1, Inches(0.5) + 1 * (kpi_width + kpi_gap), kpi_y, kpi_width, kpi_height, "Đơn hàng Delivered", "96,478", "▲ 18.4% YoY", ACCENT_CYAN)
-    create_card(slide1, Inches(0.5) + 2 * (kpi_width + kpi_gap), kpi_y, kpi_width, kpi_height, "AOV (Giá trị đơn TB)", "BRL 160.00", "● Ổn định (BRL 159.8)", ACCENT_VIOLET)
-    create_card(slide1, Inches(0.5) + 3 * (kpi_width + kpi_gap), kpi_y, kpi_width, kpi_height, "Giao hàng đúng hạn", "91.9%", "▲ Vượt SLA Target (90%)", ACCENT_EMERALD)
-    create_card(slide1, Inches(0.5) + 4 * (kpi_width + kpi_gap), kpi_y, kpi_width, kpi_height, "CSAT (Review TB)", "4.16 / 5.0", "★ 8.1% đánh giá 1 sao", ACCENT_AMBER)
-    
-    # 3. Main body Layout (4 Large Widgets)
-    widget_width = Inches(6.06)
-    widget_height = Inches(1.9)
-    
-    # Left Column: Charts
-    # Chart 1: Revenue Monthly Trend
-    chart1 = slide1.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.5), Inches(3.1), widget_width, widget_height)
-    chart1.fill.solid()
-    chart1.fill.fore_color.rgb = CARD_COLOR
-    chart1.line.color.rgb = BORDER_COLOR
-    chart1.line.width = Pt(1)
-    tf1 = chart1.text_frame
-    tf1.margin_left = Inches(0.15)
-    tf1.margin_top = Inches(0.15)
-    p_c1 = tf1.paragraphs[0]
-    p_c1.text = "📈 XU HƯỚNG DOANH THU HÀNG THÁNG (Area Chart Glow)"
-    p_c1.font.bold = True
-    p_c1.font.size = Pt(9)
-    p_c1.font.color.rgb = ACCENT_CYAN
-    p_c1.font.name = 'Segoe UI'
-    
-    p_c1_sub = tf1.add_paragraph()
-    p_c1_sub.text = "\n[Biểu đồ vùng có hiệu ứng phát sáng mờ]\n- Trục X: purchase_month\n- Trục Y: Realized Revenue\n- Ghi chú: Cột mốc Black Friday 11/2017 đạt BRL 1.16M"
-    p_c1_sub.font.size = Pt(8.5)
-    p_c1_sub.font.color.rgb = TEXT_MUTED
-    p_c1_sub.font.name = 'Segoe UI'
+    add_header(slide1, "Olist E-Commerce – Power BI Dashboard Mockup")
 
-    # Chart 2: Top Categories Bar Chart
-    chart2 = slide1.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.5), Inches(5.15), widget_width, widget_height)
-    chart2.fill.solid()
-    chart2.fill.fore_color.rgb = CARD_COLOR
-    chart2.line.color.rgb = BORDER_COLOR
-    chart2.line.width = Pt(1)
-    tf2 = chart2.text_frame
-    tf2.margin_left = Inches(0.15)
-    tf2.margin_top = Inches(0.15)
-    p_c2 = tf2.paragraphs[0]
-    p_c2.text = "📊 TOP 10 DANH MỤC DOANH THU LỚN NHẤT (Horizontal Bar Chart)"
-    p_c2.font.bold = True
-    p_c2.font.size = Pt(9)
-    p_c2.font.color.rgb = ACCENT_VIOLET
-    p_c2.font.name = 'Segoe UI'
-    
-    p_c2_sub = tf2.add_paragraph()
-    p_c2_sub.text = "\n[Cột ngang được tô màu Gradient theo thứ hạng]\n- Trục Y: product_category_name_english\n- Trục X: item_price_revenue\n- Dẫn đầu: health_beauty (BRL 1.26M) và watches_gifts (BRL 1.20M)"
-    p_c2_sub.font.size = Pt(8.5)
-    p_c2_sub.font.color.rgb = TEXT_MUTED
-    p_c2_sub.font.name = 'Segoe UI'
+    # ── Slicers bar ───────────────────────────────────────────────────────────
+    add_slicers(slide1, M, SLC_TOP, INNER_W, SLC_H)
 
-    # Right Column: Operations and Simulations
-    # Chart 3: Logistics State Heat Table
-    chart3 = slide1.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(6.76), Inches(3.1), widget_width, widget_height)
-    chart3.fill.solid()
-    chart3.fill.fore_color.rgb = CARD_COLOR
-    chart3.line.color.rgb = BORDER_COLOR
-    chart3.line.width = Pt(1)
-    tf3 = chart3.text_frame
-    tf3.margin_left = Inches(0.15)
-    tf3.margin_top = Inches(0.15)
-    p_c3 = tf3.paragraphs[0]
-    p_c3.text = "🗺️ BẢNG NHIỆT RỦI RO GIAO HÀNG TRỄ THEO BANG (Logistics Hotspots)"
-    p_c3.font.bold = True
-    p_c3.font.size = Pt(9)
-    p_c3.font.color.rgb = ACCENT_AMBER
-    p_c3.font.name = 'Segoe UI'
-    
-    p_c3_sub = tf3.add_paragraph()
-    p_c3_sub.text = "\n[Bảng ma trận với conditional formatting đỏ/vàng/xanh]\n- Hotspots: AL (Trễ 23.9% - 24 ngày), MA (Trễ 20.1% - 21 ngày)\n- Normal: SP (Trễ 8.1% - 8.3 ngày)\n- Giúp định hướng tối ưu hóa logistics và kho bãi"
-    p_c3_sub.font.size = Pt(8.5)
-    p_c3_sub.font.color.rgb = TEXT_MUTED
-    p_c3_sub.font.name = 'Segoe UI'
+    # ── 5 KPI cards ───────────────────────────────────────────────────────────
+    n_kpi = 5
+    kpi_w = (INNER_W - (n_kpi - 1) * GAP) / n_kpi
+    kpis = [
+        ("Doanh thu Realized",   "BRL 15.42M", "▲ 22.1% YoY",          ACCENT_EMERALD),
+        ("Đơn hàng Delivered",   "96,478",     "▲ 18.4% YoY",          ACCENT_CYAN),
+        ("AOV (Giá trị đơn TB)", "BRL 160.00", "● Ổn định (BRL 159.8)", ACCENT_VIOLET),
+        ("Giao hàng đúng hạn",   "91.9%",      "▲ Vượt SLA (90%)",     ACCENT_EMERALD),
+        ("CSAT (Review TB)",     "4.16 / 5.0", "★ 8.1% đánh giá 1 sao",ACCENT_AMBER),
+    ]
+    for i, (lbl, val, trnd, clr) in enumerate(kpis):
+        create_kpi_card(
+            slide1,
+            M + i * (kpi_w + GAP), KPI_TOP, kpi_w, KPI_H,
+            lbl, val, trnd, clr
+        )
 
-    # Chart 4a: BIP Category Optimization List
-    chart4a = slide1.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(6.76), Inches(5.15), Inches(2.935), widget_height)
-    chart4a.fill.solid()
-    chart4a.fill.fore_color.rgb = CARD_COLOR
-    chart4a.line.color.rgb = BORDER_COLOR
-    chart4a.line.width = Pt(1)
-    tf4a = chart4a.text_frame
-    tf4a.margin_left = Inches(0.15)
-    tf4a.margin_top = Inches(0.15)
-    p_c4a = tf4a.paragraphs[0]
-    p_c4a.text = "🎯 TOP 10 NGÀNH HÀNG ƯU TIÊN (BIP)"
-    p_c4a.font.bold = True
-    p_c4a.font.size = Pt(8)
-    p_c4a.font.color.rgb = ACCENT_EMERALD
-    p_c4a.font.name = 'Segoe UI'
-    
-    p_c4a_sub = tf4a.add_paragraph()
-    p_c4a_sub.text = "\n- Quy hoạch nguyên (BIP)\n- Ràng buộc: Cước <= 25 BRL, Review >= 3.5\n- Dẫn đầu: health_beauty, watches_gifts, bed_bath_table..."
-    p_c4a_sub.font.size = Pt(7.5)
-    p_c4a_sub.font.color.rgb = TEXT_MUTED
-    p_c4a_sub.font.name = 'Segoe UI'
+    # ── LEFT COLUMN: 2 chart cards (50/50 split) ──────────────────────────────
+    left_card_h = (BODY_H - ROW_GAP) / 2   # ~2.50"
 
-    # Chart 4b: Monte Carlo Simulation Cards
-    chart4b = slide1.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(9.895), Inches(5.15), Inches(2.935), widget_height)
-    chart4b.fill.solid()
-    chart4b.fill.fore_color.rgb = CARD_COLOR
-    chart4b.line.color.rgb = BORDER_COLOR
-    chart4b.line.width = Pt(1)
-    tf4b = chart4b.text_frame
-    tf4b.margin_left = Inches(0.15)
-    tf4b.margin_top = Inches(0.15)
-    p_c4b = tf4b.paragraphs[0]
-    p_c4b.text = "🎲 GIẢ LẬP RỦI RO MONTE CARLO"
-    p_c4b.font.bold = True
-    p_c4b.font.size = Pt(8)
-    p_c4b.font.color.rgb = ACCENT_EMERALD
-    p_c4b.font.name = 'Segoe UI'
-    
-    p_c4b_sub = tf4b.add_paragraph()
-    p_c4b_sub.text = "\n- Rủi ro Doanh thu: 21.4%\n- Rủi ro SLA giao trễ: 1.7%\n- Giả lập N=1,000 runs, đảm bảo vận hành ổn định."
-    p_c4b_sub.font.size = Pt(7.5)
-    p_c4b_sub.font.color.rgb = TEXT_MUTED
-    p_c4b_sub.font.name = 'Segoe UI'
+    # Card L1 – Revenue Trend (matches .db-card → chart-container min-height:220px)
+    add_widget_card(
+        slide1, LEFT_X, BODY_TOP, LEFT_W, left_card_h,
+        "📈 XU HƯỚNG DOANH THU HÀNG THÁNG (Area Chart Glow)", ACCENT_CYAN,
+        [
+            ("", 2.5, False, TEXT_MUTED),
+            ("[Biểu đồ vùng – Area Chart với hiệu ứng glow]", 8, False, TEXT_MUTED),
+            ("  Trục X: purchase_month  (Dim_Date[Month-Year])", 7.5, False, TEXT_MUTED),
+            ("  Trục Y: Realized Revenue (BRL)", 7.5, False, TEXT_MUTED),
+            ("  Đỉnh điểm: Black Friday 11/2017  →  BRL 1.16M", 7.5, True, ACCENT_AMBER),
+            ("  Gam màu: #06b6d4 vùng gradient fade-out", 7.5, False, TEXT_MUTED),
+            ("", 2, False, TEXT_MUTED),
+            ("  Trục X: Q3'16  Q1'17  Q3'17  Q1'18  Q3'18", 7, False, TEXT_MUTED),
+            ("  Trục Y: 0 → 500K → 1.0M → 1.5M (BRL)", 7, False, TEXT_MUTED),
+        ]
+    )
 
+    # Card L2 – Top 10 Categories Horizontal Bar
+    add_widget_card(
+        slide1, LEFT_X, BODY_TOP + left_card_h + ROW_GAP, LEFT_W, left_card_h,
+        "📊 TOP 10 DANH MỤC SẢN PHẨM DOANH THU CAO NHẤT (Horizontal Bar)", ACCENT_VIOLET,
+        [
+            ("", 2.5, False, TEXT_MUTED),
+            ("[Biểu đồ cột ngang – Gradient tô màu theo thứ hạng]", 8, False, TEXT_MUTED),
+            ("  Trục Y: product_category_name_english", 7.5, False, TEXT_MUTED),
+            ("  Trục X: item_price_revenue (BRL)", 7.5, False, TEXT_MUTED),
+            ("", 1.5, False, TEXT_MUTED),
+            ("  #1  health_beauty   →  BRL 1.26M  (Review: 4.14)", 7.5, True,  TEXT_WHITE),
+            ("  #2  watches_gifts   →  BRL 1.20M  (Review: 4.02)", 7.5, False, TEXT_MUTED),
+            ("  #3  bed_bath_table  →  BRL 1.04M  (Review: 3.89)", 7.5, False, TEXT_MUTED),
+            ("  #4  sports_leisure  →  BRL 0.99M  (Review: 4.11)", 7.5, False, TEXT_MUTED),
+            ("  #5  computers_acc   →  BRL 0.91M  (Review: 3.93)", 7.5, False, TEXT_MUTED),
+        ]
+    )
 
-    # ==================== SLIDE 2: THEME & LAYOUT SPECS ====================
+    # ── RIGHT COLUMN: 3 cards  (40% / 35% / 25%) ─────────────────────────────
+    # Mirrors HTML: Logistics → BIP → Monte Carlo
+    row_gap_r   = ROW_GAP
+    rh = [
+        BODY_H * 0.40 - row_gap_r * 2 / 3,
+        BODY_H * 0.35 - row_gap_r * 2 / 3,
+        BODY_H * 0.25 - row_gap_r * 2 / 3,
+    ]
+
+    # Card R1 – Logistics Risk Table  (mirrors .db-table in HTML)
+    r_top1 = BODY_TOP
+    add_widget_card(
+        slide1, RIGHT_X, r_top1, RIGHT_W, rh[0],
+        "🗺️ TỶ LỆ GIAO HÀNG TRỄ THEO BANG (Logistics Hotspots)", ACCENT_AMBER,
+        [
+            ("", 2, False, TEXT_MUTED),
+            ("State          │ Trễ (%)  │ Ngày TB │ Rủi ro", 7.5, True,  TEXT_MUTED),
+            ("─" * 52, 5.5, False, BORDER_COLOR),
+            ("AL (Alagoas)        │  23.9%  │ 24.3 ngày │ 🔴 Rất cao",   7.5, False, ACCENT_ROSE),
+            ("MA (Maranhão)       │  20.1%  │ 21.1 ngày │ 🔴 Rất cao",   7.5, False, ACCENT_ROSE),
+            ("BA (Bahia)          │  15.4%  │ 18.9 ngày │ 🟡 Trung bình", 7.5, False, ACCENT_AMBER),
+            ("RJ (Rio de Janeiro) │  10.2%  │ 14.8 ngày │ 🟡 Trung bình", 7.5, False, ACCENT_AMBER),
+            ("SP (São Paulo)      │   8.1%  │  8.3 ngày │ 🟢 Bình thường",7.5, False, ACCENT_EMERALD),
+            ("", 2, False, TEXT_MUTED),
+            ("⚠ AL, MA cần làm việc lại với đối tác logistics hoặc kho vệ tinh.", 7, True, ACCENT_AMBER),
+        ]
+    )
+
+    # Card R2 – BIP Category Optimization  (mirrors BIP card in HTML)
+    r_top2 = r_top1 + rh[0] + row_gap_r
+    add_widget_card(
+        slide1, RIGHT_X, r_top2, RIGHT_W, rh[1],
+        "🎯 TOP 10 NGÀNH HÀNG ƯU TIÊN – BIP Optimization", ACCENT_EMERALD,
+        [
+            ("", 2, False, TEXT_MUTED),
+            ("BIP tối đa hóa: Doanh thu × Review  |  Ràng buộc: Cước ≤ 25 BRL, Review ≥ 3.5", 7, False, ACCENT_CYAN),
+            ("", 1.5, False, TEXT_MUTED),
+            ("1. health_beauty    BRL 1.26M  (Review: 4.14)", 7.5, True,  TEXT_WHITE),
+            ("2. watches_gifts    BRL 1.20M  (Review: 4.02)", 7.5, False, TEXT_MUTED),
+            ("3. bed_bath_table   BRL 1.04M  (Review: 3.89)", 7.5, False, TEXT_MUTED),
+            ("4. sports_leisure   BRL 0.99M  (Review: 4.11)", 7.5, False, TEXT_MUTED),
+            ("5. computers_acc    BRL 0.91M  (Review: 3.93)", 7.5, False, TEXT_MUTED),
+            ("6. furniture_decor  BRL 0.73M  (Review: 3.90)", 7.5, False, TEXT_MUTED),
+            ("+ 4 khác: cool_stuff, housewares, auto, toys", 7, False, TEXT_MUTED),
+        ]
+    )
+
+    # Card R3 – Monte Carlo Simulation  (mirrors .sim-grid in HTML)
+    r_top3 = r_top2 + rh[1] + row_gap_r
+    add_widget_card(
+        slide1, RIGHT_X, r_top3, RIGHT_W, rh[2],
+        "🎲 GIẢ LẬP RỦI RO MONTE CARLO (N = 1,000 Runs)", ACCENT_VIOLET,
+        [
+            ("", 2, False, TEXT_MUTED),
+            ("Rủi ro Doanh thu tập trung:", 7.5, True, ACCENT_VIOLET),
+            ("  21.4% xác suất doanh thu danh mục giảm >20% vs mean (BRL 248K)", 7.5, False, TEXT_MUTED),
+            ("", 1.5, False, TEXT_MUTED),
+            ("Rủi ro vi phạm SLA giao hàng:", 7.5, True, ACCENT_EMERALD),
+            ("  1.7%  xác suất tỷ lệ giao trễ vượt ngưỡng 10% – Cực kỳ an toàn.", 7.5, False, TEXT_MUTED),
+        ]
+    )
+
+    # ══════════════════════════════════════════════════════════
+    # SLIDE 2 – Theme & Layout Specs
+    # ══════════════════════════════════════════════════════════
     add_bullet_slide(prs, "1. Phong cách & Bố cục (Theme & Layout Specs)", [
         "Phong cách thiết kế: Midnight Executive (Tối cao cấp)",
-        "  * Tông màu nền chủ đạo: Dark Slate (#0b0f19) và Navy Deep (#111827).",
-        "  * Thẻ thông tin và Biểu đồ: Dark Grey bán trong suốt (rgba(31, 41, 55, 0.7)), bo góc mượt mà.",
-        "  * Màu sắc điểm nhấn chức năng:",
-        "    - Xanh lục (#10b981): Biểu diễn tăng trưởng doanh thu, vận hành an toàn và vượt mục tiêu SLA.",
-        "    - Xanh lam (#06b6d4): Thể hiện dữ liệu đơn hàng và xu hướng công nghệ.",
-        "    - Màu tím (#8b5cf6): Dành cho Giá trị đơn hàng trung bình (AOV).",
-        "    - Màu vàng cam (#f59e0b) và Đỏ (#ef4444): Nhấn mạnh cảnh báo rủi ro logistics giao hàng muộn.",
-        "Cấu trúc trang: Single-Page (Một trang duy nhất)",
-        "  * Bố cục lưới cân bằng (Balanced Grid) tối ưu hóa kích thước màn hình 16:9.",
-        "  * Sắp xếp thông tin có cấu trúc: Bộ lọc -> KPIs -> Bán hàng (Trái) & Vận hành/Rủi ro (Phải).",
-        "  * Hạn chế tối đa cuộn trang hoặc chuyển đổi tab để giúp ban điều hành nắm bắt toàn cảnh nhanh nhất."
+        "  * Tông màu nền: Dark Slate (#0b0f19) | Card: Navy Deep (#111827)",
+        "  * Bo góc card: 12px (subtle) | Font: Inter / Segoe UI",
+        "  * Màu điểm nhấn chức năng:",
+        "    - Xanh lục (#10b981): tăng trưởng doanh thu, vận hành an toàn, vượt SLA",
+        "    - Xanh lam (#06b6d4): dữ liệu đơn hàng, xu hướng, badge",
+        "    - Tím (#8b5cf6): AOV, mô phỏng rủi ro",
+        "    - Vàng cam (#f59e0b) và Đỏ (#ef4444): cảnh báo logistics giao trễ",
+        "Cấu trúc trang: Single-Page Dashboard",
+        "  * Bố cục lưới 4:3 – Balanced Grid (left 1.1fr | right 0.9fr)",
+        "  * Luồng thông tin: Bộ lọc → KPIs → Bán hàng (Trái) & Vận hành/Rủi ro (Phải)",
+        "  * Hạn chế cuộn trang để ban điều hành nắm bắt toàn cảnh ngay lập tức",
     ])
 
-
-    # ==================== SLIDE 3: KPIs & DAX MEASURES ====================
+    # ══════════════════════════════════════════════════════════
+    # SLIDE 3 – DAX Measures
+    # ══════════════════════════════════════════════════════════
     add_bullet_slide(prs, "2. Công thức DAX Measures cốt lõi", [
-        "Nhóm chỉ số kinh doanh",
-        "  * Doanh thu thực tế (Realized Revenue):",
-        "    - DAX: Realized Revenue = SUM(df_master[payment_value])",
-        "  * Số đơn hàng thành công (Delivered Orders):",
-        "    - DAX: Delivered Orders = CALCULATE(DISTINCTCOUNT(df_master[order_id]), df_master[order_status] = \"delivered\")",
-        "  * Giá trị đơn hàng trung bình (AOV):",
-        "    - DAX: AOV = DIVIDE([Realized Revenue], [Delivered Orders], 0)",
+        "Nhóm chỉ số Kinh doanh",
+        '  * Doanh thu thực tế (Realized Revenue):',
+        '    - DAX: Realized Revenue = CALCULATE(SUM(df_master[payment_value]), df_master[order_status] = "delivered")',
+        '  * Số đơn hàng thành công (Delivered Orders):',
+        '    - DAX: Delivered Orders = CALCULATE(DISTINCTCOUNT(df_master[order_id]), df_master[order_status] = "delivered")',
+        '  * Giá trị đơn hàng trung bình (AOV):',
+        '    - DAX: AOV = DIVIDE([Realized Revenue], [Delivered Orders], 0)',
         "Nhóm chỉ số Vận hành & CSAT",
-        "  * Tỷ lệ giao hàng đúng hạn (On-Time Rate):",
-        "    - DAX: On-Time Delivery Rate = DIVIDE(CALCULATE(DISTINCTCOUNT(df_master[order_id]), df_master[order_status] = \"delivered\", df_master[late_flag] = 0), [Delivered Orders], 0)",
-        "  * Điểm đánh giá chất lượng (CSAT Score):",
-        "    - DAX: CSAT Score = AVERAGE(df_master[review_score])",
-        "  * Tăng trưởng so với cùng kỳ năm trước (YoY Growth %):",
-        "    - DAX: YoY Revenue Growth % = DIVIDE([Realized Revenue] - CALCULATE([Realized Revenue], SAMEPERIODLASTYEAR(Dim_Date[Date])), CALCULATE([Realized Revenue], SAMEPERIODLASTYEAR(Dim_Date[Date])), 0)"
+        '  * Tỷ lệ giao đúng hạn (On-Time Delivery Rate):',
+        '    - DAX: On-Time Rate = DIVIDE(CALCULATE(DISTINCTCOUNT(df_master[order_id]), df_master[order_status] = "delivered", df_master[late_flag] = 0), [Delivered Orders], 0)',
+        '  * Điểm đánh giá chất lượng (CSAT Score):',
+        '    - DAX: CSAT Score = CALCULATE(AVERAGE(df_master[review_score]), df_master[order_status] = "delivered")',
+        '  * Tăng trưởng YoY:',
+        '    - DAX: YoY Revenue Growth % = DIVIDE([Realized Revenue] - CALCULATE([Realized Revenue], SAMEPERIODLASTYEAR(Dim_Date[Date])), CALCULATE([Realized Revenue], SAMEPERIODLASTYEAR(Dim_Date[Date])), 0)',
     ])
 
+    # ══════════════════════════════════════════════════════════
+    # SLIDE 4 – DAX Sub-labels
+    # ══════════════════════════════════════════════════════════
+    add_bullet_slide(prs, "2.5. Công thức DAX cho Nhãn phụ (KPI Sub-labels)", [
+        "Nhóm chỉ số tăng trưởng YoY",
+        '  * Revenue Sub-label:',
+        '    - DAX: Revenue Sub-label = VAR Growth = [YoY Revenue Growth %] RETURN IF(ISBLANK(Growth) || Growth = 0, "No YoY Data", IF(Growth >= 0, "▲ ", "▼ ") & FORMAT(ABS(Growth), "0.0%") & " YoY")',
+        '  * Orders Sub-label:',
+        '    - DAX: Orders Sub-label = VAR Growth = [Orders YoY Growth %] RETURN IF(ISBLANK(Growth) || Growth = 0, "No YoY Data", IF(Growth >= 0, "▲ ", "▼ ") & FORMAT(ABS(Growth), "0.0%") & " YoY")',
+        '  * AOV Sub-label:',
+        '    - DAX: AOV Sub-label = VAR Growth = [AOV YoY Growth %] RETURN IF(ISBLANK(Growth) || Growth = 0, "No YoY Data", IF(Growth >= 0, "▲ ", "▼ ") & FORMAT(ABS(Growth), "0.0%") & " YoY")',
+        "Nhóm chỉ số Vận hành & Trực quan",
+        '  * On-Time Sub-label:',
+        '    - DAX: On-Time Sub-label = VAR SLA_Target = 0.90 VAR CurrentRate = [On-Time Delivery Rate] RETURN "Target SLA: 90.0% (" & IF(CurrentRate >= SLA_Target, "Đạt SLA", "Vi phạm SLA") & ")"',
+        '  * CSAT Sub-label:',
+        '    - DAX: CSAT Sub-label = VAR OneStarRate = [1-Star Review Rate] RETURN FORMAT(OneStarRate, "0.0%") & " rate 1-star"',
+    ])
 
-    # ==================== SLIDE 4: DATA MODELING & ETL ====================
+    # ══════════════════════════════════════════════════════════
+    # SLIDE 5 – Data Modeling & ETL
+    # ══════════════════════════════════════════════════════════
     add_bullet_slide(prs, "3. Chuẩn bị Dữ liệu & Mô hình hình sao (Star Schema)", [
         "Kết nối CSDL SQLite phụ trợ (olist_analytics.db)",
-        "  * Thay vì nạp 9 tệp CSV rời rạc, nạp trực tiếp database để cải thiện hiệu năng tải trang.",
-        "  * Import view df_master làm Fact Table chính (chứa dữ liệu đơn hàng, thanh toán, ngày giao).",
-        "  * Import view item_detail làm Fact/Dimension phụ (cho phân tích danh mục, sản phẩm, cước vận chuyển).",
+        "  * Nạp database thay vì 9 tệp CSV rời rạc → cải thiện hiệu năng tải trang",
+        "  * Import view df_master làm Fact Table chính (đơn hàng, thanh toán, ngày giao)",
+        "  * Import view item_detail làm Fact/Dimension phụ (danh mục, sản phẩm, cước phí)",
         "Thiết lập bảng lịch Dim_Date bằng DAX",
-        "  * Tạo bảng lịch tự động bằng công thức:",
+        "  * Tạo bảng lịch tự động:",
         "    - Dim_Date = VAR MinDate = MIN(df_master[order_purchase_timestamp])",
-        "      VAR MaxDate = MAX(df_master[order_purchase_timestamp])",
-        "      RETURN ADDCOLUMNS(CALENDAR(MinDate, MaxDate), \"Year\", YEAR([Date]), \"Month Number\", MONTH([Date]), \"Month Short\", FORMAT([Date], \"MMM\"), \"Month-Year Number\", YEAR([Date]) * 100 + MONTH([Date]), \"Month-Year\", FORMAT([Date], \"YYYY-MM\"), \"Quarter\", \"Q\" & QUARTER([Date]))",
-        "  * Cấu hình sắp xếp cột (Sort by Column) để hiển thị biểu đồ đúng thứ tự thời gian (Ví dụ: Month Short sắp xếp theo Month Number).",
-        "Thiết lập các mối quan hệ (Relationships)",
-        "  * Quan hệ 1-nhiều (1:*) từ Dim_Date[Date] đến df_master[order_purchase_timestamp].",
-        "  * Quan hệ 1-nhiều (1:*) từ df_master[order_id] đến item_detail[order_id]."
+        "    - VAR MaxDate = MAX(df_master[order_purchase_timestamp])",
+        '    - RETURN ADDCOLUMNS(CALENDAR(MinDate, MaxDate), "Year", YEAR([Date]), ...)',
+        "  * Cấu hình Sort by Column: Month Short → sắp xếp theo Month Number",
+        "Thiết lập Relationships",
+        "  * 1:* từ Dim_Date[Date] → df_master[order_purchase_timestamp]",
+        "  * 1:* từ df_master[order_id] → item_detail[order_id]",
     ])
 
+    # ── Save ──────────────────────────────────────────────────────────────────
+    out_path = os.path.join(base_dir, "Outputs", "reports",
+                            "Olist_PowerBI_Dashboard_Specification_4x3.pptx")
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    prs.save(out_path)
+    print(f"✅  Saved  →  {out_path}")
+    print(f"   Canvas  : {prs.slide_width / 914400:.2f}\" × {prs.slide_height / 914400:.2f}\"  (4:3)")
+    print(f"   Slides  : {len(prs.slides)}")
 
-    # ==================== SLIDE 5: LOGISTICS & RISK INSIGHTS ====================
-    add_bullet_slide(prs, "4. Nhận diện Rủi ro & Tối ưu hóa", [
-        "Điểm nóng Logistics (Geographical Hotspots)",
-        "  * Bang Alagoas (AL) và Maranhão (MA) có tỷ lệ giao trễ cực kỳ cao: AL (23.9% trễ, 24.3 ngày giao trung bình); MA (20.1% trễ, 21.1 ngày giao trung bình).",
-        "  * Định hướng hành động: Cần làm việc lại với đơn vị vận chuyển đối tác tại vùng Đông Bắc hoặc cân nhắc kho phân phối vệ tinh.",
-        "Mô hình Tối ưu hóa ưu tiên danh mục (BIP Screen)",
-        "  * Danh sách 10 danh mục trọng tâm được chọn để tối đa hóa doanh thu và đánh giá review với ràng buộc cước phí trung bình <= 25 BRL và review >= 3.5.",
-        "  * Hàng đầu: health_beauty (BRL 1.26M), watches_gifts (BRL 1.20M), bed_bath_table (BRL 1.04M).",
-        "Giả lập Rủi ro Monte Carlo",
-        "  * Rủi ro doanh thu tập trung: Có 21.4% xác suất doanh thu hàng tháng của nhóm danh mục ưu tiên sụt giảm quá 20% so với trung bình kỳ vọng (Expected Mean BRL 248.5K).",
-        "  * Rủi ro vi phạm SLA: Chỉ có 1.7% xác suất tỷ lệ giao trễ toàn sàn vượt quá 10%, cho thấy hệ thống vận hành nền tảng rất ổn định."
-    ])
 
-    # Ensure output directory exists
-    output_path = os.path.join(base_dir, 'Outputs', 'reports', 'Olist_PowerBI_Dashboard_Specification.pptx')
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    
-    # Save presentation
-    prs.save(output_path)
-    print(f"Presentation saved successfully at: {output_path}")
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
